@@ -5,6 +5,7 @@ import json
 import os
 import bcrypt
 import asyncio
+import urllib.request
 from datetime import datetime
 from typing import Any, Dict
 
@@ -49,6 +50,42 @@ def _read_stream_to_bytes(stream) -> bytes:
 
     return b"".join(stream)
 
+def _resolve_awaitable(value):
+    if asyncio.iscoroutine(value):
+        return asyncio.run(value)
+    return value
+
+def _extract_blob_bytes(result) -> bytes:
+    # Handle async return values from SDK methods
+    result = _resolve_awaitable(result)
+
+    if result is None:
+        return b""
+
+    # Common response shapes from SDKs
+    if hasattr(result, "content"):
+        content = result.content
+        if isinstance(content, bytes):
+            return content
+        if isinstance(content, str):
+            return content.encode("utf-8")
+
+    if hasattr(result, "stream"):
+        return _read_stream_to_bytes(result.stream)
+
+    # Fallback for responses that only provide a signed URL
+    download_url = None
+    if isinstance(result, dict):
+        download_url = result.get("download_url") or result.get("url")
+    else:
+        download_url = getattr(result, "download_url", None) or getattr(result, "url", None)
+
+    if download_url:
+        with urllib.request.urlopen(download_url) as response:
+            return response.read()
+
+    return b""
+
 def _blob_client():
     if not USE_BLOB:
         return None
@@ -59,12 +96,17 @@ def _blob_read_json(pathname: str, default: Dict[str, Any]):
         return default
     try:
         result = blob_get(pathname, access=PRIVATE_BLOB_ACCESS)
-        if result is None:
+        raw = _extract_blob_bytes(result)
+        if not raw:
             return default
-        raw = _read_stream_to_bytes(result.stream)
         return json.loads(raw.decode("utf-8"))
-    except Exception:
-        return default
+    except Exception as exc:
+        message = str(exc).lower()
+        # Missing object is a valid first-run case.
+        if "404" in message or "not found" in message:
+            return default
+        # Any other error should not silently reset data.
+        raise
 
 def _blob_write_json(pathname: str, data: Dict[str, Any]):
     if not USE_BLOB:
@@ -73,18 +115,19 @@ def _blob_write_json(pathname: str, data: Dict[str, Any]):
     if client is None:
         return
     payload = json.dumps(data).encode("utf-8")
-    client.put(
+    put_result = client.put(
         pathname,
         payload,
         access=PRIVATE_BLOB_ACCESS,
         content_type="application/json",
         overwrite=True
     )
+    _resolve_awaitable(put_result)
 
 def init_users_storage():
     if USE_BLOB:
-        data = _blob_read_json(BLOB_USERS_PATH, {"next_uid": 1, "users": []})
-        _blob_write_json(BLOB_USERS_PATH, data)
+        # Do not write defaults on startup in serverless runtime.
+        # This prevents accidental reset when a read fails transiently.
         return
 
     if not os.path.exists(USERS_FILE):
@@ -94,8 +137,8 @@ def init_users_storage():
 # Initialize trash data storage
 def init_trash_storage():
     if USE_BLOB:
-        data = _blob_read_json(BLOB_TRASH_PATH, {"records": []})
-        _blob_write_json(BLOB_TRASH_PATH, data)
+        # Do not write defaults on startup in serverless runtime.
+        # This prevents accidental reset when a read fails transiently.
         return
 
     if not os.path.exists(TRASH_DATA_FILE):
@@ -104,7 +147,13 @@ def init_trash_storage():
 
 def load_users_storage():
     if USE_BLOB:
-        data = _blob_read_json(BLOB_USERS_PATH, {"next_uid": 1, "users": []})
+        try:
+            data = _blob_read_json(BLOB_USERS_PATH, {"next_uid": 1, "users": []})
+        except Exception as exc:
+            if ON_VERCEL:
+                print(f"[BLOB READ ERROR] {BLOB_USERS_PATH}: {exc}")
+            # Fail closed: keep existing data safe by refusing to proceed with empty default.
+            raise RuntimeError("Gagal membaca users dari Blob. Coba lagi.")
     else:
         if not os.path.exists(USERS_FILE):
             return {"next_uid": 1, "users": []}
@@ -141,7 +190,13 @@ def save_users_storage(data):
 
 def load_trash_storage():
     if USE_BLOB:
-        data = _blob_read_json(BLOB_TRASH_PATH, {"records": []})
+        try:
+            data = _blob_read_json(BLOB_TRASH_PATH, {"records": []})
+        except Exception as exc:
+            if ON_VERCEL:
+                print(f"[BLOB READ ERROR] {BLOB_TRASH_PATH}: {exc}")
+            # Fail closed: keep existing data safe by refusing to proceed with empty default.
+            raise RuntimeError("Gagal membaca data sampah dari Blob. Coba lagi.")
     else:
         if not os.path.exists(TRASH_DATA_FILE):
             return {"records": []}
@@ -178,11 +233,21 @@ poin_sampah = {
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form["username"]
+        username = request.form["username"].strip()
         password = request.form["password"]
-        
-        users_data = load_users_storage()
-        user = next((u for u in users_data["users"] if u["nama"] == username), None)
+        if not username:
+            flash("Username wajib diisi")
+            return redirect('/')
+
+        try:
+            users_data = load_users_storage()
+        except RuntimeError as err:
+            flash(str(err))
+            return redirect('/')
+        user = next(
+            (u for u in users_data["users"] if str(u.get("nama", "")).strip().lower() == username.lower()),
+            None
+        )
 
         if user:
             if bcrypt.checkpw(password.encode(), user['password'].encode('utf-8')):
@@ -204,11 +269,18 @@ def register():
             flash("Storage belum terhubung. Set BLOB_READ_WRITE_TOKEN di Vercel Environment Variables.")
             return redirect('/register')
 
-        newname = request.form["newname"]
+        newname = request.form["newname"].strip()
         newpass = request.form["newpass"]
+        if not newname:
+            flash("Username wajib diisi")
+            return redirect('/register')
         
-        users_data = load_users_storage()
-        if any(u["nama"] == newname for u in users_data["users"]):
+        try:
+            users_data = load_users_storage()
+        except RuntimeError as err:
+            flash(str(err))
+            return redirect('/register')
+        if any(str(u.get("nama", "")).strip().lower() == newname.lower() for u in users_data["users"]):
             flash("Username sudah terdaftar, gunakan username lain")
             return redirect('/register')
 
@@ -221,7 +293,11 @@ def register():
             "jumlah_poin": 0
         })
         users_data["next_uid"] = new_uid + 1
-        save_users_storage(users_data)
+        try:
+            save_users_storage(users_data)
+        except Exception:
+            flash("Gagal menyimpan user ke Blob. Coba lagi.")
+            return redirect('/register')
         
         return redirect('/')
     
@@ -268,7 +344,11 @@ def dashboard():
             foto.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
 
         # Save trash data to JSON
-        trash_data = load_trash_storage()
+        try:
+            trash_data = load_trash_storage()
+        except RuntimeError as err:
+            flash(str(err))
+            return redirect('/dashboard')
 
         trash_data["records"].append({
             "uid": session.get("uid"),
@@ -278,17 +358,33 @@ def dashboard():
             "file": filename
         })
 
-        save_trash_storage(trash_data)
+        try:
+            save_trash_storage(trash_data)
+        except Exception:
+            flash("Gagal menyimpan data sampah ke Blob. Coba lagi.")
+            return redirect('/dashboard')
 
         # Update user points
-        users_data = load_users_storage()
+        try:
+            users_data = load_users_storage()
+        except RuntimeError as err:
+            flash(str(err))
+            return redirect('/dashboard')
         user = next((u for u in users_data["users"] if u["uid"] == session.get("uid")), None)
         if user:
             user["jumlah_poin"] += poin
-            save_users_storage(users_data)
+            try:
+                save_users_storage(users_data)
+            except Exception:
+                flash("Gagal update poin user di Blob. Coba lagi.")
+                return redirect('/dashboard')
 
     # Get user points
-    users_data = load_users_storage()
+    try:
+        users_data = load_users_storage()
+    except RuntimeError as err:
+        flash(str(err))
+        return redirect('/')
     user = next((u for u in users_data["users"] if u["uid"] == session.get("uid")), None)
     total_poin = user["jumlah_poin"] if user else 0
 

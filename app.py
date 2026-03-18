@@ -25,6 +25,7 @@ BLOB_USERS_PATH = "db/users.json"
 BLOB_TRASH_PATH = "db/trash_data.json"
 PRIVATE_BLOB_ACCESS = "private"
 USE_BLOB = bool(os.getenv("BLOB_READ_WRITE_TOKEN")) and BlobClient is not None
+ON_VERCEL = os.getenv("VERCEL") == "1"
 
 UPLOAD_FOLDER = "uploads"
 if not USE_BLOB:
@@ -199,6 +200,10 @@ def login():
 @app.route("/register", methods=["GET", "POST"] )
 def register():
     if request.method == "POST":
+        if ON_VERCEL and not USE_BLOB:
+            flash("Storage belum terhubung. Set BLOB_READ_WRITE_TOKEN di Vercel Environment Variables.")
+            return redirect('/register')
+
         newname = request.form["newname"]
         newpass = request.form["newpass"]
         
@@ -229,6 +234,10 @@ def dashboard():
         return redirect("/")
 
     if request.method == "POST":
+        if ON_VERCEL and not USE_BLOB:
+            flash("Storage belum terhubung. Set BLOB_READ_WRITE_TOKEN di Vercel Environment Variables.")
+            return redirect('/dashboard')
+
         jenis = request.form["jenis"]
         kg = float(request.form["kg"])
         if kg <= 0:

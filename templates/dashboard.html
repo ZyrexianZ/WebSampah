@@ -18,17 +18,31 @@
         body {
             margin: 0;
             background:
-                linear-gradient(rgba(10,10,10,0.18), rgba(10,10,10,0.18)),
-                url('/bg-dashboard.svg'),
-                url('/background.png');
-            background-repeat: no-repeat, no-repeat, no-repeat;
-            background-position: center center, center center, center center;
-            background-attachment: fixed, fixed, fixed;
+                linear-gradient(180deg, #ff8c4b 0%, #ffb56b 38%, #c07bdb 72%, #6c5ab8 100%);
+            background-attachment: fixed;
             background-size: cover;
-            background-color: #111;
+            background-color: #6c5ab8;
             color: #ffffff;
             min-height: 100vh;
             overflow-x: hidden;
+            position: relative;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(circle, rgba(255,255,255,0.95) 0 1.2px, transparent 1.7px);
+            background-size: 130px 130px;
+            background-position: 0 0;
+            opacity: 0.45;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .page-wrap,
+        .flash-wrap {
+            position: relative;
+            z-index: 1;
         }
         .page-wrap {
             width: min(95vw, 920px);
@@ -91,9 +105,7 @@
             border-color: #2e7d32;
         }
         @media (max-width: 576px) {
-            body {
-                background-attachment: scroll;
-            }
+            body { background-attachment: scroll; }
             .flash-wrap {
                 top: 12px;
                 width: calc(100vw - 24px);

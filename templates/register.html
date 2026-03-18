@@ -1,19 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Bikin Akun Baru</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pE6Vj+yXAvDXk1t2X9rE0B4Nl+6Ch4Ya2+VqvDvCpsZQ0V2pKQW3x4Jk6nOxUQx5jEJ0sagUz3YQ0fFZXxCI5w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
+      :root {
+          --base-font-size: clamp(15px, 0.35vw + 13px, 17px);
+      }
+      html {
+          font-size: var(--base-font-size);
+          -webkit-text-size-adjust: 100%;
+          text-size-adjust: 100%;
+      }
       body {
+          margin: 0;
           background: linear-gradient(rgba(10,10,10,0.35), rgba(10,10,10,0.35)), url('/background.png') no-repeat center center fixed;
           background-size: cover;
           background-color: #111;
           color: #e0e0e0;
-          min-height:100vh;
+          min-height: 100vh;
+          overflow-x: hidden;
       }
       .page-wrap {
           width: min(92vw, 560px);
+          padding-inline: clamp(10px, 2.5vw, 20px);
       }
       .flash-wrap {
           position: fixed;
@@ -27,6 +40,7 @@
           border: none;
           border-radius: 1rem;
           background: rgba(33,33,33,0.95);
+          padding: clamp(1rem, 2vw, 1.6rem) !important;
       }
       .card input.form-control {
           background: #1e1e1e;
@@ -59,6 +73,12 @@
       a.btn-success:hover {
           background-color: #2e7d32;
           border-color: #2e7d32;
+      }
+      @media (max-width: 576px) {
+          .flash-wrap {
+              top: 12px;
+              width: calc(100vw - 24px);
+          }
       }
     </style>
 </head>

@@ -17,7 +17,13 @@
         }
         body {
             margin: 0;
-            background: linear-gradient(rgba(10,10,10,0.35), rgba(10,10,10,0.35)), url('/background.png') no-repeat center center fixed;
+            background:
+                linear-gradient(rgba(10,10,10,0.18), rgba(10,10,10,0.18)),
+                url('/bg-dashboard.svg'),
+                url('/background.png');
+            background-repeat: no-repeat, no-repeat, no-repeat;
+            background-position: center center, center center, center center;
+            background-attachment: fixed, fixed, fixed;
             background-size: cover;
             background-color: #111;
             color: #ffffff;
@@ -85,6 +91,9 @@
             border-color: #2e7d32;
         }
         @media (max-width: 576px) {
+            body {
+                background-attachment: scroll;
+            }
             .flash-wrap {
                 top: 12px;
                 width: calc(100vw - 24px);

@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sunset" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff8c4b"/>
+      <stop offset="40%" stop-color="#ffb56b"/>
+      <stop offset="72%" stop-color="#c07bdb"/>
+      <stop offset="100%" stop-color="#6c5ab8"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.2" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#sunset)"/>
+
+  <!-- soft light blooms -->
+  <circle cx="220" cy="140" r="180" fill="#ffd28f" opacity="0.20"/>
+  <circle cx="1380" cy="170" r="200" fill="#ffa77b" opacity="0.16"/>
+
+  <!-- white dots -->
+  <g fill="#ffffff" opacity="0.88" filter="url(#glow)">
+    <circle cx="90" cy="75" r="2"/>
+    <circle cx="180" cy="120" r="1.8"/>
+    <circle cx="260" cy="58" r="1.6"/>
+    <circle cx="340" cy="132" r="2.1"/>
+    <circle cx="420" cy="90" r="1.7"/>
+    <circle cx="510" cy="155" r="2.2"/>
+    <circle cx="600" cy="70" r="1.5"/>
+    <circle cx="690" cy="128" r="1.9"/>
+    <circle cx="770" cy="85" r="1.7"/>
+    <circle cx="860" cy="62" r="1.8"/>
+    <circle cx="940" cy="122" r="2.1"/>
+    <circle cx="1030" cy="88" r="1.6"/>
+    <circle cx="1110" cy="142" r="2.2"/>
+    <circle cx="1200" cy="73" r="1.7"/>
+    <circle cx="1280" cy="118" r="2"/>
+    <circle cx="1360" cy="64" r="1.6"/>
+    <circle cx="1450" cy="130" r="2.3"/>
+    <circle cx="1520" cy="95" r="1.8"/>
+
+    <circle cx="130" cy="220" r="1.7"/>
+    <circle cx="220" cy="260" r="2"/>
+    <circle cx="310" cy="205" r="1.5"/>
+    <circle cx="390" cy="278" r="2.2"/>
+    <circle cx="480" cy="235" r="1.8"/>
+    <circle cx="570" cy="292" r="1.6"/>
+    <circle cx="650" cy="225" r="2.1"/>
+    <circle cx="740" cy="275" r="1.7"/>
+    <circle cx="830" cy="230" r="1.6"/>
+    <circle cx="910" cy="288" r="2.1"/>
+    <circle cx="1000" cy="240" r="1.8"/>
+    <circle cx="1090" cy="300" r="1.5"/>
+    <circle cx="1170" cy="250" r="2.2"/>
+    <circle cx="1260" cy="292" r="1.7"/>
+    <circle cx="1340" cy="232" r="1.6"/>
+    <circle cx="1430" cy="275" r="2"/>
+    <circle cx="1510" cy="220" r="1.7"/>
+
+    <circle cx="170" cy="365" r="1.9"/>
+    <circle cx="255" cy="420" r="1.7"/>
+    <circle cx="340" cy="352" r="1.6"/>
+    <circle cx="430" cy="435" r="2.1"/>
+    <circle cx="520" cy="380" r="1.8"/>
+    <circle cx="610" cy="442" r="1.7"/>
+    <circle cx="700" cy="360" r="2.2"/>
+    <circle cx="790" cy="430" r="1.6"/>
+    <circle cx="880" cy="372" r="1.7"/>
+    <circle cx="970" cy="445" r="2"/>
+    <circle cx="1060" cy="385" r="1.8"/>
+    <circle cx="1150" cy="432" r="1.6"/>
+    <circle cx="1240" cy="368" r="2.2"/>
+    <circle cx="1330" cy="425" r="1.7"/>
+    <circle cx="1420" cy="355" r="1.9"/>
+  </g>
+</svg>

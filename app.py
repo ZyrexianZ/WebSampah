@@ -1,5 +1,5 @@
 
-from flask import Flask , render_template , request , redirect , session , flash , redirect , url_for
+from flask import Flask, render_template, request, redirect, session, flash
 from werkzeug.utils import secure_filename
 import json
 import os
@@ -17,6 +17,7 @@ except Exception:
 
 app = Flask(__name__, static_folder="public", static_url_path="")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-only-secret-key")
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
 # Blob storage files
 USERS_FILE = "users.json"
@@ -27,6 +28,7 @@ BLOB_TRASH_PATH = "db/trash_data.json"
 PRIVATE_BLOB_ACCESS = "private"
 USE_BLOB = bool(os.getenv("BLOB_READ_WRITE_TOKEN")) and BlobClient is not None
 ON_VERCEL = os.getenv("VERCEL") == "1"
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 
 UPLOAD_FOLDER = "uploads"
 if not USE_BLOB:
@@ -90,6 +92,19 @@ def _blob_client():
     if not USE_BLOB:
         return None
     return BlobClient()
+
+def _find_user_by_name(users_data: Dict[str, Any], username: str):
+    normalized = username.strip().lower()
+    return next(
+        (u for u in users_data["users"] if str(u.get("nama", "")).strip().lower() == normalized),
+        None
+    )
+
+def _allowed_image(filename: str) -> bool:
+    if "." not in filename:
+        return False
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext in ALLOWED_IMAGE_EXTENSIONS
 
 def _blob_read_json(pathname: str, default: Dict[str, Any]):
     if not USE_BLOB or blob_get is None:
@@ -236,29 +251,26 @@ def login():
         username = request.form["username"].strip()
         password = request.form["password"]
         if not username:
-            flash("Username wajib diisi")
+            flash("Username wajib diisi", "danger")
             return redirect('/')
 
         try:
             users_data = load_users_storage()
         except RuntimeError as err:
-            flash(str(err))
+            flash(str(err), "danger")
             return redirect('/')
-        user = next(
-            (u for u in users_data["users"] if str(u.get("nama", "")).strip().lower() == username.lower()),
-            None
-        )
+        user = _find_user_by_name(users_data, username)
 
         if user:
             if bcrypt.checkpw(password.encode(), user['password'].encode('utf-8')):
-                session['nama'] = username
+                session['nama'] = user["nama"]
                 session['uid'] = user['uid']
                 return redirect('/dashboard')
             else:
-                flash("Gagal, Username dan Password tidak cocok")
+                flash("Gagal, Username dan Password tidak cocok", "danger")
                 return redirect('/')
         else:
-            flash("Gagal, User tidak ditemukan")
+            flash("Gagal, User tidak ditemukan", "danger")
             return redirect('/')
     return render_template("login.html")
 
@@ -266,22 +278,25 @@ def login():
 def register():
     if request.method == "POST":
         if ON_VERCEL and not USE_BLOB:
-            flash("Storage belum terhubung. Set BLOB_READ_WRITE_TOKEN di Vercel Environment Variables.")
+            flash("Storage belum terhubung. Set BLOB_READ_WRITE_TOKEN di Vercel Environment Variables.", "danger")
             return redirect('/register')
 
         newname = request.form["newname"].strip()
         newpass = request.form["newpass"]
         if not newname:
-            flash("Username wajib diisi")
+            flash("Username wajib diisi", "danger")
+            return redirect('/register')
+        if len(newpass) < 6:
+            flash("Password minimal 6 karakter", "danger")
             return redirect('/register')
         
         try:
             users_data = load_users_storage()
         except RuntimeError as err:
-            flash(str(err))
+            flash(str(err), "danger")
             return redirect('/register')
-        if any(str(u.get("nama", "")).strip().lower() == newname.lower() for u in users_data["users"]):
-            flash("Username sudah terdaftar, gunakan username lain")
+        if _find_user_by_name(users_data, newname):
+            flash("Username sudah terdaftar, gunakan username lain", "danger")
             return redirect('/register')
 
         hash_password = bcrypt.hashpw(newpass.encode(), bcrypt.gensalt()).decode('utf-8')
@@ -296,9 +311,10 @@ def register():
         try:
             save_users_storage(users_data)
         except Exception:
-            flash("Gagal menyimpan user ke Blob. Coba lagi.")
+            flash("Gagal menyimpan user ke Blob. Coba lagi.", "danger")
             return redirect('/register')
         
+        flash("Akun berhasil dibuat. Silakan login.", "success")
         return redirect('/')
     
     return render_template("register.html")
@@ -311,22 +327,36 @@ def dashboard():
 
     if request.method == "POST":
         if ON_VERCEL and not USE_BLOB:
-            flash("Storage belum terhubung. Set BLOB_READ_WRITE_TOKEN di Vercel Environment Variables.")
+            flash("Storage belum terhubung. Set BLOB_READ_WRITE_TOKEN di Vercel Environment Variables.", "danger")
             return redirect('/dashboard')
 
-        jenis = request.form["jenis"]
-        kg = float(request.form["kg"])
+        jenis = request.form.get("jenis")
+        if jenis not in poin_sampah:
+            flash("Jenis sampah tidak valid", "danger")
+            return redirect("/dashboard")
+        try:
+            kg = float(request.form.get("kg", "0"))
+        except ValueError:
+            flash("Berat sampah harus berupa angka", "danger")
+            return redirect("/dashboard")
         if kg <= 0:
-            flash("Berat sampah harus lebih dari 0")
+            flash("Berat sampah harus lebih dari 0", "danger")
             return redirect("/dashboard")
         elif kg > 100:
-            flash("Berat sampah tidak boleh melebihi 100 kg")
+            flash("Berat sampah tidak boleh melebihi 100 kg", "danger")
             return redirect("/dashboard")
         
         poin = kg * poin_sampah[jenis]
         
-        foto = request.files["foto"]
+        foto = request.files.get("foto")
+        if foto is None or not foto.filename:
+            flash("File foto wajib diunggah", "danger")
+            return redirect("/dashboard")
         filename = secure_filename(foto.filename)
+        if not _allowed_image(filename):
+            flash("Format file harus PNG, JPG, JPEG, atau WEBP", "danger")
+            return redirect("/dashboard")
+
         if USE_BLOB:
             client = _blob_client()
             if client:
@@ -347,7 +377,7 @@ def dashboard():
         try:
             trash_data = load_trash_storage()
         except RuntimeError as err:
-            flash(str(err))
+            flash(str(err), "danger")
             return redirect('/dashboard')
 
         trash_data["records"].append({
@@ -361,14 +391,14 @@ def dashboard():
         try:
             save_trash_storage(trash_data)
         except Exception:
-            flash("Gagal menyimpan data sampah ke Blob. Coba lagi.")
+            flash("Gagal menyimpan data sampah ke Blob. Coba lagi.", "danger")
             return redirect('/dashboard')
 
         # Update user points
         try:
             users_data = load_users_storage()
         except RuntimeError as err:
-            flash(str(err))
+            flash(str(err), "danger")
             return redirect('/dashboard')
         user = next((u for u in users_data["users"] if u["uid"] == session.get("uid")), None)
         if user:
@@ -376,14 +406,16 @@ def dashboard():
             try:
                 save_users_storage(users_data)
             except Exception:
-                flash("Gagal update poin user di Blob. Coba lagi.")
+                flash("Gagal update poin user di Blob. Coba lagi.", "danger")
                 return redirect('/dashboard')
+        flash("Data sampah berhasil disimpan.", "success")
+        return redirect('/dashboard')
 
     # Get user points
     try:
         users_data = load_users_storage()
     except RuntimeError as err:
-        flash(str(err))
+        flash(str(err), "danger")
         return redirect('/')
     user = next((u for u in users_data["users"] if u["uid"] == session.get("uid")), None)
     total_poin = user["jumlah_poin"] if user else 0
@@ -395,6 +427,7 @@ def dashboard():
 @app.route("/logout")
 def logout():
     session.pop("nama", None)
+    session.pop("uid", None)
     return redirect("/")
 
 @app.route("/favicon.ico")

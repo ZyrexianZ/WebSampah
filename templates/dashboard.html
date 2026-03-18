@@ -12,6 +12,9 @@
             color: #ffffff;
             min-height:100vh;
         }
+        .page-wrap {
+            width: min(95vw, 920px);
+        }
         .flash-wrap {
             position: fixed;
             top: 20px;
@@ -27,6 +30,10 @@
             border: none;
             border-radius: 1rem;
             background: rgba(33,33,33,0.95);
+        }
+        .submit-btn:disabled {
+            opacity: 0.75;
+            cursor: not-allowed;
         }
         .card input.form-control, .card select.form-select {
             background: #1e1e1e;
@@ -67,16 +74,16 @@
 </head>
 <body class="d-flex align-items-center justify-content-center">
     <div class="flash-wrap">
-        {% with messages = get_flashed_messages() %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-danger mb-2">{{ message }}</div>
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category in ['success', 'danger', 'warning', 'info'] else 'info' }} mb-2">{{ message }}</div>
                 {% endfor %}
              {% endif %}
       {% endwith %}
     </div>
 
-<div class="container mt-5">
+<div class="container mt-5 page-wrap">
 
     <div class="d-flex justify-content-between">
         <h3>Halo, {{ user }}</h3>
@@ -92,7 +99,7 @@
         <h4>Sampah yang anda masukkan</h4>
         <br>
         <h5> Jenis Sampah :</h5>
-        <form method="POST" action="/dashboard" enctype="multipart/form-data">
+        <form method="POST" action="/dashboard" enctype="multipart/form-data" class="auto-loading-form">
             <select name="jenis" class="form-select mb-3 jenis-dropdown">
                 {% for j in jenis_list %}
                 <option value="{{ j }}">{{ j }}</option>
@@ -100,16 +107,26 @@
             </select>
         <br>
         <h5>Berat sampah (Kg) :</h5>
-            <input type="number" step="0.1" name="kg" class="form-control mb-3 input-bordered" placeholder="Jumlah (kg)" required>
+            <input type="number" step="0.1" min="0.1" max="100" name="kg" class="form-control mb-3 input-bordered" placeholder="Jumlah (kg)" required>
         <br>
         <h5>Foto sampah :</h5>
-            <input type="file" name="foto" class="form-control mb-3 input-bordered" required>
+            <input type="file" name="foto" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" class="form-control mb-3 input-bordered" required>
 
 
-            <button class="btn btn-success">Simpan</button>
+            <button class="btn btn-success submit-btn">Simpan</button>
         </form>
     </div>
 </div>  
 
 </body>
+<script>
+  document.querySelectorAll(".auto-loading-form").forEach((form) => {
+    form.addEventListener("submit", () => {
+      const btn = form.querySelector(".submit-btn");
+      if (!btn) return;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Menyimpan...';
+    });
+  });
+</script>
 </html>

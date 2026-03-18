@@ -12,6 +12,9 @@
           color: #e0e0e0;
           min-height:100vh;
       }
+      .page-wrap {
+          width: min(92vw, 560px);
+      }
       .flash-wrap {
           position: fixed;
           top: 20px;
@@ -24,6 +27,10 @@
           border: none;
           border-radius: 1rem;
           background: rgba(33,33,33,0.95);
+      }
+      .submit-btn:disabled {
+          opacity: 0.75;
+          cursor: not-allowed;
       }
       .card input.form-control {
           background: #1e1e1e;
@@ -58,26 +65,26 @@
 <body class="d-flex align-items-center justify-content-center">
 
   <div class="flash-wrap">
-      {% with messages = get_flashed_messages() %}
+      {% with messages = get_flashed_messages(with_categories=true) %}
               {% if messages %}
-                  {% for message in messages %}
-                      <div class="alert alert-danger mb-2">{{ message }}</div>
+                  {% for category, message in messages %}
+                      <div class="alert alert-{{ category if category in ['success', 'danger', 'warning', 'info'] else 'info' }} mb-2">{{ message }}</div>
                   {% endfor %}
               {% endif %}
       {% endwith %}
   </div>
-<div class="container">
+<div class="container page-wrap">
     <div class="card p-4 shadow-lg">
         <div class="logo"></div>
         <h3 class="text-center mb-4 text-white">Selamat Datang Kembali</h3>
-        <form method="POST" action="/">
+        <form method="POST" action="/" class="auto-loading-form">
             <div class="form-floating mb-3">
-                <input type="text" class="form-control" id="username" name="username" placeholder="Nama Pengguna" required>
+                <input type="text" class="form-control" id="username" name="username" placeholder="Nama Pengguna" autocomplete="username" required>
             </div>
             <div class="form-floating mb-3">
-                <input type="password" class="form-control" id="password" name="password" placeholder="Kata Sandi" required>
+                <input type="password" class="form-control" id="password" name="password" placeholder="Kata Sandi" autocomplete="current-password" required>
             </div>
-            <button class="btn btn-primary w-100"><i class="fa fa-sign-in-alt"></i> Masuk</button>
+            <button class="btn btn-primary w-100 submit-btn"><i class="fa fa-sign-in-alt"></i> Masuk</button>
         </form>
     </div>
     <div class="text-center mt-3">
@@ -85,6 +92,15 @@
     </div>
 </div>
 
-
 </body>
+<script>
+  document.querySelectorAll(".auto-loading-form").forEach((form) => {
+    form.addEventListener("submit", () => {
+      const btn = form.querySelector(".submit-btn");
+      if (!btn) return;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Memproses...';
+    });
+  });
+</script>
 </html>

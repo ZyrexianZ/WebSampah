@@ -12,6 +12,9 @@
           color: #e0e0e0;
           min-height:100vh;
       }
+      .page-wrap {
+          width: min(92vw, 560px);
+      }
       .flash-wrap {
           position: fixed;
           top: 20px;
@@ -42,6 +45,10 @@
           box-shadow: 0 8px 16px rgba(0,0,0,0.35);
           margin: 0 auto 20px;
       }
+      .submit-btn:disabled {
+          opacity: 0.75;
+          cursor: not-allowed;
+      }
       input::placeholder {
           color: white !important;
       }
@@ -58,29 +65,29 @@
 <body class="d-flex align-items-center justify-content-center">
 
   <div class="flash-wrap">
-      {% with messages = get_flashed_messages() %}
+      {% with messages = get_flashed_messages(with_categories=true) %}
               {% if messages %}
-                  {% for message in messages %}
-                      <div class="alert alert-danger mb-2">{{ message }}</div>
+                  {% for category, message in messages %}
+                      <div class="alert alert-{{ category if category in ['success', 'danger', 'warning', 'info'] else 'info' }} mb-2">{{ message }}</div>
                   {% endfor %}
               {% endif %}
       {% endwith %}
   </div>
   
-<div class="container">
+<div class="container page-wrap">
     <div class="card p-4 shadow-lg">
         <div class="logo"></div>
         <h3 class="text-center mb-4 text-white">Buat Akun</h3>
-        <form method="POST" action="/register">
+        <form method="POST" action="/register" class="auto-loading-form">
             <div class="form-floating mb-3">
-                <input type="text" class="form-control" id="newname" name="newname" placeholder="Nama Pengguna" required>
+                <input type="text" class="form-control" id="newname" name="newname" placeholder="Nama Pengguna" autocomplete="username" required>
                 <label for="newname"><i class="fa fa-user"></i> Nama Pengguna</label>
             </div>
             <div class="form-floating mb-3">
-                <input type="password" class="form-control" id="newpass" name="newpass" placeholder="Kata Sandi" required>
+                <input type="password" class="form-control" id="newpass" name="newpass" placeholder="Kata Sandi" autocomplete="new-password" minlength="6" required>
                 <label for="newpass"><i class="fa fa-lock"></i> Kata Sandi</label>
             </div>
-            <button class="btn btn-primary w-100"><i class="fa fa-user-plus"></i> Daftar</button>
+            <button class="btn btn-primary w-100 submit-btn"><i class="fa fa-user-plus"></i> Daftar</button>
         </form>
     </div>
     <div class="text-center mt-3">
@@ -88,6 +95,15 @@
     </div>
 </div>
 
-
 </body>
+<script>
+  document.querySelectorAll(".auto-loading-form").forEach((form) => {
+    form.addEventListener("submit", () => {
+      const btn = form.querySelector(".submit-btn");
+      if (!btn) return;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Menyimpan...';
+    });
+  });
+</script>
 </html>

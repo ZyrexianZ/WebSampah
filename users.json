@@ -1,0 +1,11 @@
+{
+  "next_uid": 2,
+  "users": [
+    {
+      "uid": 1,
+      "nama": "Ian",
+      "password": "$2b$12$tMe3lGZ8fFD2Dm4Me45Gt.P.nsPvJHy2UfWXFxS4PQh6WfMGTFQrG",
+      "jumlah_poin": 100.0
+    }
+  ]
+}

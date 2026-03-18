@@ -1,0 +1,11 @@
+{
+  "records": [
+    {
+      "uid": 1,
+      "tanggal_submit": "2026-03-17 14:28",
+      "jenis_sampah": "Plastik",
+      "berat": 10.0,
+      "file": "rbaikan_infor.docx"
+    }
+  ]
+}

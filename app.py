@@ -292,6 +292,11 @@ def logout():
     session.pop("nama", None)
     return redirect("/")
 
+@app.route("/favicon.ico")
+def favicon():
+    # Prevent noisy 404s if no favicon file exists yet.
+    return "", 204
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

@@ -6,10 +6,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pE6Vj+yXAvDXk1t2X9rE0B4Nl+6Ch4Ya2+VqvDvCpsZQ0V2pKQW3x4Jk6nOxUQx5jEJ0sagUz3YQ0fFZXxCI5w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         body {
-            background: url('/background.png') no-repeat center center fixed;
+            background: linear-gradient(rgba(10,10,10,0.35), rgba(10,10,10,0.35)), url('/background.png') no-repeat center center fixed;
             background-size: cover;
+            background-color: #111;
             color: #ffffff;
             min-height:100vh;
+        }
+        .flash-wrap {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: min(92vw, 520px);
         }
         h1, h2, h3, h4, h5, h6, p, label {
             color: #ffffff !important;
@@ -57,13 +66,15 @@
     </style>
 </head>
 <body class="d-flex align-items-center justify-content-center">
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-danger">{{ message }}</div>
-            {% endfor %}
-         {% endif %}
-  {% endwith %}
+    <div class="flash-wrap">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-danger mb-2">{{ message }}</div>
+                {% endfor %}
+             {% endif %}
+      {% endwith %}
+    </div>
 
 <div class="container mt-5">
 
